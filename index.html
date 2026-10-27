@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>신나는 곱셈구구 게임!</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Jua', sans-serif;
+            background-color: #F8F9FA;
+            background-image: 
+                linear-gradient(90deg, transparent 79px, #abced4 79px, #abced4 81px, transparent 81px),
+                linear-gradient(#eee .1em, transparent .1em);
+            background-size: 100% 1.2em;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        .title-text {
+            text-shadow: 2px 2px 0px #FFD700, 4px 4px 0px #FFA500;
+            color: #FF4500;
+        }
+
+        .cute-box {
+            background-color: white;
+            border: 4px dashed #FFB6C1;
+            border-radius: 20px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary {
+            background-color: #FFB6C1;
+            color: white;
+            border-bottom: 4px solid #FF69B4;
+            transition: transform 0.1s, border-bottom 0.1s;
+        }
+        .btn-primary:active {
+            transform: translateY(4px);
+            border-bottom: 0px;
+            margin-bottom: 4px;
+        }
+
+        .option-btn {
+            background-color: #E0F7FA;
+            color: #00796B;
+            border: 4px solid transparent;
+            border-bottom: 4px solid #B2EBF2;
+            transition: all 0.2s ease;
+        }
+        .option-btn.selected {
+            background-color: #FFF9C4;
+            border-color: #FBC02D;
+            color: #F57F17;
+            transform: scale(1.05);
+        }
+
+        .score-banner {
+            background-color: rgba(255, 255, 255, 0.95);
+            border-bottom: 3px dashed #FFD700;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Message Box */
+        #message-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            display: none;
+            background: white;
+            border: 4px solid #FF69B4;
+            border-radius: 20px;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2);
+        }
+        
+        #overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4);
+            z-index: 999;
+            display: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center pb-10">
+
+    <!-- Score Banner (Hidden initially) -->
+    <div id="score-banner" class="hidden w-full fixed top-0 left-0 score-banner py-2 px-4 flex justify-around text-xl md:text-2xl z-50">
+        <div class="flex items-center text-pink-600">
+            <span class="mr-2">📝 문제 낸 사람:</span>
+            <span id="banner-name1" class="font-bold mr-4"></span>
+            <span class="bg-pink-100 px-3 py-1 rounded-full"><span id="banner-score1">0</span>점</span>
+        </div>
+        <div class="flex items-center text-blue-600">
+            <span class="mr-2">💡 문제 푸는 사람:</span>
+            <span id="banner-name2" class="font-bold mr-4"></span>
+            <span class="bg-blue-100 px-3 py-1 rounded-full"><span id="banner-score2">0</span>점</span>
+        </div>
+    </div>
+
+    <!-- Padding to avoid overlap with sticky banner -->
+    <div id="top-padding" class="h-0 transition-all duration-300"></div>
+
+    <!-- Phase 1: Intro / Name Entry -->
+    <div id="screen-intro" class="w-full max-w-2xl mt-20 px-4">
+        <h1 class="text-5xl md:text-6xl text-center title-text mb-8 mt-10">신나는 곱셈구구 게임!</h1>
+        <div class="cute-box p-8 flex flex-col items-center space-y-6">
+            <p class="text-2xl text-gray-700">친구와 함께 곱셈구구를 마스터해봐요!</p>
+            
+            <div class="w-full flex flex-col space-y-4 max-w-sm">
+                <div>
+                    <label class="block text-xl text-pink-500 mb-2">문제 내는 친구 이름</label>
+                    <input type="text" id="input-name1" class="w-full p-3 text-xl border-2 border-pink-300 rounded-xl focus:outline-none focus:border-pink-500" placeholder="예: 지훈">
+                </div>
+                <div>
+                    <label class="block text-xl text-blue-500 mb-2">문제 푸는 친구 이름</label>
+                    <input type="text" id="input-name2" class="w-full p-3 text-xl border-2 border-blue-300 rounded-xl focus:outline-none focus:border-blue-500" placeholder="예: 민수">
+                </div>
+            </div>
+
+            <button onclick="startGame()" class="btn-primary text-2xl py-3 px-8 rounded-full mt-4 w-full max-w-sm">
+                게임 시작하기!
+            </button>
+        </div>
+    </div>
+
+    <!-- Phase 2: Prep Phase (Student 1 enters 10 numbers) -->
+    <div id="screen-prep" class="w-full max-w-3xl mt-8 px-4 hidden">
+        <h2 class="text-4xl text-center text-pink-600 mb-6 mt-16"><span id="display-name1"></span> 친구, 문제를 만들어주세요!</h2>
+        <div class="cute-box p-6 md:p-8 flex flex-col items-center">
+            <p class="text-xl text-gray-700 mb-6 text-center bg-yellow-100 p-4 rounded-lg">
+                곱셈구구의 값 10개를 아래에 입력해줘.<br>
+                (주의: 1부터 9까지의 수를 곱해서 나올 수 있는 진짜 '곱셈구구' 값이어야 점수를 얻을 수 있어!)
+            </p>
+            
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4 w-full mb-8" id="prep-inputs-container">
+                <!-- Inputs injected via JS -->
+            </div>
+
+            <button onclick="submitPrep()" class="btn-primary text-2xl py-3 px-8 rounded-full w-full max-w-sm">
+                문제 제출하기
+            </button>
+        </div>
+    </div>
+
+    <!-- Phase 3: Play Phase (Student 2 plays 10 rounds) -->
+    <div id="screen-play" class="w-full max-w-4xl mt-8 px-4 hidden">
+        <h2 class="text-4xl text-center text-blue-600 mb-6 mt-16"><span id="display-name2"></span> 친구의 차례!</h2>
+        <div class="cute-box p-6 md:p-10 flex flex-col items-center">
+            
+            <div class="text-2xl text-gray-600 mb-2 font-bold">문제 <span id="round-indicator">1</span> / 10</div>
+            
+            <div class="w-32 h-32 md:w-48 md:h-48 bg-yellow-300 rounded-full flex items-center justify-center border-8 border-yellow-400 mb-8 shadow-lg">
+                <span id="target-number" class="text-6xl md:text-8xl text-yellow-800 font-bold"></span>
+            </div>
+
+            <p class="text-xl text-center mb-6 bg-blue-50 p-4 rounded-xl border border-blue-200">
+                위의 숫자와 결과가 똑같은 곱셈식을 <b class="text-red-500">모두</b> 골라주세요!<br>
+                <span class="text-sm text-gray-500 mt-2 block">(맞는 식이 하나도 없으면 아무것도 고르지 않고 제출해도 돼!)</span>
+            </p>
+
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6 w-full mb-8" id="options-container">
+                <!-- Buttons injected via JS -->
+            </div>
+
+            <button onclick="submitRound()" class="btn-primary bg-blue-400 border-blue-600 text-2xl py-3 px-8 rounded-full w-full max-w-sm">
+                정답 제출
+            </button>
+        </div>
+    </div>
+
+    <!-- Phase 4: Result Phase -->
+    <div id="screen-result" class="w-full max-w-5xl mt-8 px-4 hidden">
+        <h2 class="text-5xl text-center title-text mb-8 mt-16">게임 결과 발표!</h2>
+        <div class="cute-box p-6 md:p-8 flex flex-col items-center">
+            
+            <div class="flex flex-col md:flex-row justify-around w-full mb-8 gap-4">
+                <div class="bg-pink-100 p-6 rounded-2xl text-center border-2 border-pink-300 w-full md:w-1/2">
+                    <h3 class="text-2xl text-pink-600 mb-2">출제자: <span id="final-name1"></span></h3>
+                    <p class="text-4xl font-bold text-pink-800"><span id="final-score1"></span> 점</p>
+                    <p class="text-md text-pink-600 mt-2">알맞은 곱셈구구 값 1개당 1점!</p>
+                </div>
+                <div class="bg-blue-100 p-6 rounded-2xl text-center border-2 border-blue-300 w-full md:w-1/2">
+                    <h3 class="text-2xl text-blue-600 mb-2">해결자: <span id="final-name2"></span></h3>
+                    <p class="text-4xl font-bold text-blue-800"><span id="final-score2"></span> 점</p>
+                    <p class="text-md text-blue-600 mt-2">문제 해결 점수 총합!</p>
+                </div>
+            </div>
+
+            <h3 class="text-3xl text-gray-800 mb-4">상세 결과</h3>
+            <div class="w-full overflow-x-auto">
+                <table class="w-full text-center border-collapse">
+                    <thead>
+                        <tr class="bg-gray-100 border-b-2 border-gray-300 text-xl text-gray-700">
+                            <th class="p-3 whitespace-nowrap">문제</th>
+                            <th class="p-3 whitespace-nowrap">곱셈구구 값</th>
+                            <th class="p-3 whitespace-nowrap">선택한 식</th>
+                            <th class="p-3 whitespace-nowrap">올바른 식</th>
+                            <th class="p-3 whitespace-nowrap">획득 점수</th>
+                        </tr>
+                    </thead>
+                    <tbody id="result-tbody" class="text-lg">
+                        <!-- Rows injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <button onclick="location.reload()" class="btn-primary text-2xl py-3 px-8 rounded-full mt-10 w-full max-w-sm">
+                처음부터 다시하기
+            </button>
+        </div>
+    </div>
+
+    <!-- Custom Message Box (Replacement for alert) -->
+    <div id="overlay"></div>
+    <div id="message-box">
+        <p id="message-text" class="text-2xl mb-6 text-gray-800"></p>
+        <button onclick="closeMessage()" class="btn-primary text-xl py-2 px-6 rounded-full bg-pink-400">확인</button>
+    </div>
+
+    <script>
+        // Game State Variables
+        let student1 = { name: "", score: 0 };
+        let student2 = { name: "", score: 0 };
+        let targets = [];
+        let validMultiples = new Set();
+        let currentRound = 0;
+        let roundsData = []; // To store round info for final result table
+        let currentOptions = []; // { expression: '3 × 4', isCorrect: true, selected: false }
+
+        // Initialize valid multiplication table results (1x1 to 9x9)
+        for (let i = 1; i <= 9; i++) {
+            for (let j = 1; j <= 9; j++) {
+                validMultiples.add(i * j);
+            }
+        }
+
+        // --- Custom Alert/Message Box ---
+        function showMessage(text) {
+            document.getElementById('message-text').innerText = text;
+            document.getElementById('overlay').style.display = 'block';
+            document.getElementById('message-box').style.display = 'block';
+        }
+
+        function closeMessage() {
+            document.getElementById('overlay').style.display = 'none';
+            document.getElementById('message-box').style.display = 'none';
+        }
+
+        // --- Phase 1: Start Game ---
+        function startGame() {
+            const name1 = document.getElementById('input-name1').value.trim();
+            const name2 = document.getElementById('input-name2').value.trim();
+
+            if (!name1 || !name2) {
+                showMessage("두 친구의 이름을 모두 입력해주세요!");
+                return;
+            }
+
+            student1.name = name1;
+            student2.name = name2;
+
+            // Update UI
+            document.getElementById('banner-name1').innerText = student1.name;
+            document.getElementById('banner-name2').innerText = student2.name;
+            document.getElementById('display-name1').innerText = student1.name;
+
+            document.getElementById('score-banner').classList.remove('hidden');
+            document.getElementById('top-padding').classList.add('h-16'); // Add padding for sticky header
+
+            // Hide intro, show prep
+            document.getElementById('screen-intro').classList.add('hidden');
+            setupPrepPhase();
+            document.getElementById('screen-prep').classList.remove('hidden');
+        }
+
+        // --- Phase 2: Prep Phase ---
+        function setupPrepPhase() {
+            const container = document.getElementById('prep-inputs-container');
+            container.innerHTML = '';
+            for (let i = 1; i <= 10; i++) {
+                const div = document.createElement('div');
+                div.className = 'flex flex-col items-center bg-gray-50 p-3 rounded-xl border border-gray-200';
+                div.innerHTML = `
+                    <label class="text-sm text-gray-500 mb-1">${i}번 값</label>
+                    <input type="number" id="target-input-${i}" class="w-full text-center text-2xl p-2 border-2 border-pink-300 rounded-lg focus:outline-none focus:border-pink-500" min="1" max="99">
+                `;
+                container.appendChild(div);
+            }
+        }
+
+        function submitPrep() {
+            targets = [];
+            let score1 = 0;
+            for (let i = 1; i <= 10; i++) {
+                const val = document.getElementById(`target-input-${i}`).value;
+                if (val === "" || isNaN(val)) {
+                    showMessage("10개의 숫자를 모두 올바르게 입력해주세요!");
+                    return;
+                }
+                const num = parseInt(val, 10);
+                targets.push(num);
+                // Score Student 1: 1 point per valid multiplication result
+                if (validMultiples.has(num)) {
+                    score1++;
+                }
+            }
+
+            student1.score = score1;
+            document.getElementById('banner-score1').innerText = student1.score;
+            document.getElementById('display-name2').innerText = student2.name;
+
+            // Hide prep, show play
+            document.getElementById('screen-prep').classList.add('hidden');
+            document.getElementById('screen-play').classList.remove('hidden');
+            
+            // Start round 1
+            currentRound = 0;
+            startRound();
+        }
+
+        // --- Phase 3: Play Phase ---
+        function generateOptions(target) {
+            let optionsData = [];
+            let validPairs = [];
+
+            // Find all valid pairs for the target
+            if (validMultiples.has(target)) {
+                for (let i = 1; i <= 9; i++) {
+                    for (let j = 1; j <= 9; j++) {
+                        if (i * j === target) {
+                            validPairs.push(`${i} × ${j}`);
+                        }
+                    }
+                }
+            }
+
+            let numCorrect = 0;
+            if (validPairs.length > 0) {
+                // Determine how many correct options to show (1 to min(3, total pairs))
+                let maxPossible = Math.min(3, validPairs.length);
+                numCorrect = Math.floor(Math.random() * maxPossible) + 1;
+                
+                // Shuffle and pick
+                validPairs.sort(() => Math.random() - 0.5);
+                let selectedCorrectPairs = validPairs.slice(0, numCorrect);
+                
+                selectedCorrectPairs.forEach(expr => {
+                    optionsData.push({ expression: expr, isCorrect: true, selected: false });
+                });
+            }
+
+            // Fill the rest with incorrect options
+            while (optionsData.length < 6) {
+                let a = Math.floor(Math.random() * 9) + 1;
+                let b = Math.floor(Math.random() * 9) + 1;
+                let expr = `${a} × ${b}`;
+                
+                // Ensure it's not actually correct and not a duplicate in current options
+                if ((a * b !== target) && !optionsData.some(opt => opt.expression === expr)) {
+                    optionsData.push({ expression: expr, isCorrect: false, selected: false });
+                }
+            }
+
+            // Shuffle all 6 options
+            return optionsData.sort(() => Math.random() - 0.5);
+        }
+
+        function startRound() {
+            if (currentRound >= 10) {
+                showResult();
+                return;
+            }
+
+            const target = targets[currentRound];
+            document.getElementById('round-indicator').innerText = currentRound + 1;
+            document.getElementById('target-number').innerText = target;
+
+            currentOptions = generateOptions(target);
+
+            const container = document.getElementById('options-container');
+            container.innerHTML = '';
+
+            currentOptions.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn text-2xl md:text-3xl font-bold py-4 md:py-6 rounded-2xl w-full flex items-center justify-center';
+                btn.innerText = opt.expression;
+                btn.onclick = () => toggleOption(index, btn);
+                container.appendChild(btn);
+            });
+        }
+
+        function toggleOption(index, btnElement) {
+            currentOptions[index].selected = !currentOptions[index].selected;
+            if (currentOptions[index].selected) {
+                btnElement.classList.add('selected');
+            } else {
+                btnElement.classList.remove('selected');
+            }
+        }
+
+        function submitRound() {
+            let totalCorrect = 0;
+            let selectedCorrect = 0;
+            let selectedWrong = 0;
+
+            let correctExpressions = [];
+            let selectedExpressions = [];
+
+            currentOptions.forEach(opt => {
+                if (opt.isCorrect) {
+                    totalCorrect++;
+                    correctExpressions.push(opt.expression);
+                }
+                if (opt.selected) {
+                    selectedExpressions.push(opt.expression);
+                    if (opt.isCorrect) selectedCorrect++;
+                    else selectedWrong++;
+                }
+            });
+
+            // Scoring Logic
+            let baseScore = 0;
+            if (totalCorrect > 0 && selectedCorrect === totalCorrect) {
+                baseScore = 10;
+            } else if (totalCorrect > 0 && selectedCorrect > 0 && selectedCorrect < totalCorrect) {
+                baseScore = 5;
+            } else if (totalCorrect === 0 && selectedWrong === 0) {
+                baseScore = 10;
+            }
+
+            // Deduction
+            let finalRoundScore = baseScore - selectedWrong;
+
+            student2.score += finalRoundScore;
+            document.getElementById('banner-score2').innerText = student2.score;
+
+            // Save for summary
+            roundsData.push({
+                round: currentRound + 1,
+                target: targets[currentRound],
+                selected: selectedExpressions.length > 0 ? selectedExpressions.join(', ') : '없음',
+                correct: correctExpressions.length > 0 ? correctExpressions.join(', ') : '없음',
+                score: finalRoundScore
+            });
+
+            currentRound++;
+            startRound();
+        }
+
+        // --- Phase 4: Result Phase ---
+        function showResult() {
+            document.getElementById('screen-play').classList.add('hidden');
+            document.getElementById('score-banner').classList.add('hidden'); // Hide banner on final screen
+            document.getElementById('top-padding').classList.remove('h-16');
+
+            document.getElementById('final-name1').innerText = student1.name;
+            document.getElementById('final-score1').innerText = student1.score;
+            document.getElementById('final-name2').innerText = student2.name;
+            document.getElementById('final-score2').innerText = student2.score;
+
+            const tbody = document.getElementById('result-tbody');
+            tbody.innerHTML = '';
+
+            roundsData.forEach((data, index) => {
+                const tr = document.createElement('tr');
+                tr.className = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+                
+                // Color formatting for score
+                let scoreColorClass = 'text-gray-800';
+                if (data.score === 10) scoreColorClass = 'text-green-600 font-bold';
+                else if (data.score > 0) scoreColorClass = 'text-blue-600';
+                else if (data.score < 0) scoreColorClass = 'text-red-500';
+
+                tr.innerHTML = `
+                    <td class="p-3 border border-gray-200">${data.round}</td>
+                    <td class="p-3 border border-gray-200 font-bold">${data.target}</td>
+                    <td class="p-3 border border-gray-200 text-gray-600">${data.selected}</td>
+                    <td class="p-3 border border-gray-200 text-blue-600">${data.correct}</td>
+                    <td class="p-3 border border-gray-200 ${scoreColorClass}">${data.score > 0 ? '+' : ''}${data.score}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('screen-result').classList.remove('hidden');
+        }
+
+    </script>
+</body>
+</html>
